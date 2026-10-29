@@ -1,5 +1,13 @@
 const mongoose = require('mongoose');
+const dns = require('dns');
 const env = require('./env');
+
+// Fix for Windows / campus / local ISP DNS blocking querySrv lookups
+try {
+  dns.setServers(['8.8.8.8', '1.1.1.1']);
+} catch {
+  // Ignore if not permitted
+}
 
 let isConnected = false;
 
@@ -16,7 +24,15 @@ async function connectDatabase(uri = env.mongodbUri) {
     }
     return conn.connection;
   } catch (error) {
-    console.error('[MongoDB] Connection error:', error.message);
+    console.error('\n=============================================================');
+    console.error('[MongoDB] Connection Failed:', error.message);
+    if (uri.includes('localhost') || uri.includes('127.0.0.1')) {
+      console.error('\n>>> LOCAL MONGODB SERVICE IS NOT RUNNING ON YOUR SYSTEM <<<');
+      console.error('To fix this, create a free MongoDB Atlas cluster and add its connection string:');
+      console.error('1. Create "server/.env" file (copied from server/.env.example)');
+      console.error('2. Set MONGODB_URI=mongodb+srv://<user>:<password>@cluster0.../fixmystreet');
+      console.error('=============================================================\n');
+    }
     if (env.nodeEnv !== 'test') {
       process.exit(1);
     }
